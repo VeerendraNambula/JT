@@ -11,6 +11,7 @@ from src.linkedin.ingest import ingest_raw_posts, ProcessingResult
 from src.linkedin.job_detector import JobDetector
 from src.linkedin.job_parser import JobParser
 from src.twitter.tweet_generator import TweetGenerator
+from src.twitter.publisher import XPublisher
 
 # Configure logging
 logging.basicConfig(
@@ -37,7 +38,12 @@ logger = logging.getLogger("jt.cli")
     default=True,
     help="Enable or disable LLM-based classification/parsing (falls back to heuristics if disabled or if API key is missing)"
 )
-def main(input_file: str, output_file: str, use_llm: bool):
+@click.option(
+    "--publish/--no-publish",
+    default=False,
+    help="Enable interactive human-in-the-loop publishing to X/Twitter (requires Twitter credentials)"
+)
+def main(input_file: str, output_file: str, use_llm: bool, publish: bool):
     """
     LinkedIn-to-X Job Parser & Tweet Generator Pipeline.
     
@@ -61,11 +67,15 @@ def main(input_file: str, output_file: str, use_llm: bool):
     detector = JobDetector(use_llm=use_llm)
     parser = JobParser()
     tweeter = TweetGenerator()
+    publisher = XPublisher()
     
     # Inform user of status
     api_key_status = "Available" if os.getenv("GEMINI_API_KEY") else "Not configured (Using Heuristics)"
     click.echo(f"[*] Gemini API Key: {api_key_status}")
     click.echo(f"[*] LLM Processing: {'Enabled' if use_llm and os.getenv('GEMINI_API_KEY') else 'Disabled/Fallback'}")
+    click.echo(f"[*] X/Twitter Publisher Configured: {publisher.is_configured()}")
+    if publish and not publisher.is_configured():
+        click.echo("[WARNING] Twitter/X credentials are not fully configured. Publishing will be skipped.", err=True)
     click.echo("--------------------------------------------------")
     
     results = []
@@ -93,11 +103,25 @@ def main(input_file: str, output_file: str, use_llm: bool):
             click.echo(f"\n{tweet}\n")
             click.echo("      --------------------------------")
             
+            # Interactive publishing logic (human-in-the-loop)
+            tweet_id = None
+            if publish and publisher.is_configured():
+                if click.confirm("Do you want to publish this tweet to X?", default=False):
+                    click.echo("[*] Publishing tweet to X...")
+                    tweet_id = publisher.publish_tweet(tweet)
+                    if tweet_id:
+                        click.echo(f"[+] Successfully posted to X! Tweet ID: {tweet_id}")
+                    else:
+                        click.echo("[-] Failed to post tweet to X.", err=True)
+                else:
+                    click.echo("[*] Publishing skipped by user.")
+                    
             result = ProcessingResult(
                 post=post,
                 is_job=True,
                 job_details=details,
-                tweet_text=tweet
+                tweet_text=tweet,
+                tweet_id=tweet_id
             )
         else:
             click.echo("  --> [SKIPPED] Non-job post.")

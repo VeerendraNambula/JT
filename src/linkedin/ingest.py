@@ -25,6 +25,7 @@ class ProcessingResult(BaseModel):
     is_job: bool
     job_details: Optional[JobDetails] = None
     tweet_text: Optional[str] = None
+    tweet_id: Optional[str] = None
 
 def ingest_posts_from_json(file_path: str) -> List[LinkedInPost]:
     with open(file_path, "r", encoding="utf-8") as f:
