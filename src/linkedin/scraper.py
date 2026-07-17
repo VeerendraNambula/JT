@@ -89,12 +89,16 @@ class LinkedInScraper:
                         # 2. Text Content
                         text_el = None
                         text_selectors = [
+                            ".feed-shared-inline-show-more-text",
+                            ".update-components-update-v2__commentary",
+                            "span.break-words",
                             ".feed-shared-text", 
                             ".feed-shared-update-v2__description-wrapper",
                             ".commentary",
                             ".share-update-card__description-text",
                             ".org-update-card-single-update__commentary",
-                            ".feed-shared-update-v2__commentary"
+                            ".feed-shared-update-v2__commentary",
+                            ".feed-shared-update-v2__description"
                         ]
                         for ts in text_selectors:
                             text_el = card.query_selector(ts)
@@ -114,6 +118,8 @@ class LinkedInScraper:
                         # 3. Author Name
                         author_el = None
                         author_selectors = [
+                            ".update-components-actor__title",
+                            ".update-components-actor__single-line-truncate",
                             "span.feed-shared-actor__title",
                             ".org-update-actor__title",
                             ".share-update-card__actor-text",
@@ -140,6 +146,7 @@ class LinkedInScraper:
                         # 5. Posted Date (Relative string)
                         date_el = None
                         date_selectors = [
+                            ".update-components-actor__sub-description",
                             ".feed-shared-actor__sub-text",
                             ".share-update-card__actor-subtext",
                             ".org-update-actor__sub-text"

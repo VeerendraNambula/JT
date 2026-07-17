@@ -1,33 +1,12 @@
 [
   {
     "post": {
-      "post_id": "post_1",
-      "author_name": "Vijay Patel",
-      "author_profile_url": null,
-      "post_url": "https://linkedin.com/posts/vijay-patel-987a",
-      "text_content": "We are hiring! Looking for a founding AI/ML Engineer to join us at Krama AI in Bengaluru. Experience: 2-4 years. We offer 18-24 LPA + equity. Apply here: https://krama.ai/careers/founding-ml",
-      "posted_date": "2026-07-17T09:30:00Z"
-    },
-    "is_job": true,
-    "job_details": {
-      "role": "Ml Engineer",
-      "company": "Unspecified",
-      "location": "Bengaluru",
-      "experience_level": "2-4 years. We offer 18-24 LPA + equity. Apply here: https://krama.ai/careers/founding-ml",
-      "salary": "18-24 LPA",
-      "apply_link": "https://krama.ai/careers/founding-ml"
-    },
-    "tweet_text": "🤖 Job Alert: Ml Engineer\n🏢 Company: Unspecified\n📍 Location: Bengaluru\n💼 Exp: 2-4 years. We offer 18-24 LPA + equity. Apply here: https://krama.ai/careers/founding-ml\n💰 Salary: 18-24 LPA\n\n🔗 Apply: https://krama.ai/careers/founding-ml\n\n#IndiaJobs #TechHiring #AI",
-    "tweet_id": null
-  },
-  {
-    "post": {
-      "post_id": "post_2",
-      "author_name": "Anjali Sharma",
-      "author_profile_url": null,
-      "post_url": "https://linkedin.com/posts/anjali-sharma-1234",
-      "text_content": "Excited to share that I have started a new role as Senior Product Manager! Grateful to all my mentors and colleagues who helped me along the way.",
-      "posted_date": "2026-07-17T10:00:00Z"
+      "post_id": "7483528537124012033",
+      "author_name": "Google\nGoogle",
+      "author_profile_url": "https://www.linkedin.com/company/google/posts",
+      "post_url": "https://www.linkedin.com/feed/update/urn:li:activity:7483172938054131713/",
+      "text_content": "For over 60 years, Pelé Brand’s legendary \"lost goal\" at Rua Javari lived in the memories of those who were there. \n\nIn close collaboration with historians, experts and Pelé’s family, we used Google DeepMind technology to bring this iconic moment to life. ⚽️ Learn more and see the film ↓\n…more",
+      "posted_date": "16h"
     },
     "is_job": false,
     "job_details": null,
@@ -36,23 +15,51 @@
   },
   {
     "post": {
-      "post_id": "post_3",
-      "author_name": "Rajesh Kumar",
-      "author_profile_url": null,
-      "post_url": "https://linkedin.com/posts/rajesh-kumar-888",
-      "text_content": "Immediate requirement at TechCraft! Role: Senior React Developer. Location: Pune (Remote friendly). Exp: 5+ years. Email your CV to careers@techcraft.in",
-      "posted_date": "2026-07-17T11:15:00Z"
+      "post_id": "7483202586758533120",
+      "author_name": "Google\nGoogle",
+      "author_profile_url": "https://www.linkedin.com/company/google/posts",
+      "post_url": "https://www.linkedin.com/feed/update/urn:li:activity:7483202586758533120",
+      "text_content": "Navigating a career transition or preparing for your next interview requires the right tools and strategy. Gemini’s career coaching tools are designed to support you at every stage of your journey. Here’s how you can use them to your advantage:\n\n✍️ Generate professional resume templates and cover letters, ensuring your top skills are highlighted effectively with Canvas.\n\n🗣️ Practice behavioral interview questions and get real-time feedback with Gemini Live. \n\n💪 Identify transferable skills and build a comprehensive, personalized job search roadmap with Gemini’s Career Coach Gem.\n\nExplore how these tools can support your career goals ⬇️ https://goo.gle/4ahKY2O\n…more",
+      "posted_date": "1d"
+    },
+    "is_job": false,
+    "job_details": null,
+    "tweet_text": null,
+    "tweet_id": null
+  },
+  {
+    "post": {
+      "post_id": "7482509024559611905",
+      "author_name": "Google\nGoogle",
+      "author_profile_url": "https://www.linkedin.com/company/google/posts",
+      "post_url": "https://www.linkedin.com/feed/update/urn:li:activity:7482509024559611905",
+      "text_content": "After navigating recruiting season and applying to hundreds of internships, YouTube iOS developer Conor started at Google a few months after graduating. “It honestly felt like a surreal experience to get the offer,” he says. Now, he spends his days tackling complex engineering challenges for a product he uses every single day. \n\nConor’s advice for current students: “What’s important is that you are ready for if and when an opportunity arrives,” he says. “Your career path will not look like those around you, and that’s ok! Don’t let yourself be put in a box based on the internships you have or have not had in the past.\"\n\nCheck out our open roles → https://goo.gle/3Ebyc8z\n…more",
+      "posted_date": "3d"
     },
     "is_job": true,
     "job_details": {
-      "role": "Senior React Developer",
+      "role": "Software Engineer",
       "company": "Unspecified",
-      "location": "Pune (Remote friendly)",
-      "experience_level": "5+ years. Email your CV to careers@techcraft.in",
+      "location": "India",
+      "experience_level": "Not Specified",
       "salary": null,
-      "apply_link": "mailto:careers@techcraft.in"
+      "apply_link": "https://goo.gle/3Ebyc8z"
     },
-    "tweet_text": "💻 Job Alert: Senior React Developer\n🏢 Company: Unspecified\n📍 Location: Pune (Remote friendly)\n💼 Exp: 5+ years. Email your CV to careers@techcraft.in\n\n🔗 Apply: mailto:careers@techcraft.in\n\n#IndiaJobs #TechHiring #Dev",
+    "tweet_text": "💻 Job Alert: Software Engineer\n🏢 Company: Unspecified\n📍 Location: India\n💼 Exp: Not Specified\n\n🔗 Apply: https://goo.gle/3Ebyc8z\n\n#IndiaJobs #TechHiring #Dev",
+    "tweet_id": null
+  },
+  {
+    "post": {
+      "post_id": "7481450796090466304",
+      "author_name": "Google\nGoogle",
+      "author_profile_url": "https://www.linkedin.com/company/google/posts",
+      "post_url": "https://www.linkedin.com/feed/update/urn:li:activity:7481450796090466304",
+      "text_content": "For Helen, a software engineer at our Meadowpoint Campus in San Jose, transitioning into a new role is all about the mindset. “Be a sponge,” she advises. “Learn from the people around you, take initiative in your own learning, be highly receptive to feedback and never hesitate to ask for help.\"\n\nNow nine months into her role on the Identity and Engagement team, Helen is helping phase out traditional text verification in favor of seamless, carrier-integrated authentication. She keeps her day-to-day dynamic by tackling two distinct tracks: “One line of my work involves leveraging machine learning to optimize and save costs across our verification lifecycle. Separately, I work on a project transforming the user experience for phone number verification in third-party apps: one tap and you're verified; no need to type digits!”\n\nWhile the tech is complex, Helen has found that the most crucial skills for success are actually soft skills. “People say it time and time again, but collaboration and teamwork,” she emphasizes. “It’s that constant interaction that actually makes the work happen.”\n\nExplore our open software engineering opportunities → https://goo.gle/4vkzjZe\n…more",
+      "posted_date": "6d"
+    },
+    "is_job": false,
+    "job_details": null,
+    "tweet_text": null,
     "tweet_id": null
   }
 ]
