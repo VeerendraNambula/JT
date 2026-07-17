@@ -69,7 +69,12 @@ logger = logging.getLogger("jt.cli")
     default=None,
     help="Search query to search for posts on LinkedIn (e.g. 'hiring email')"
 )
-def main(input_file: str, url: str, output_file: str, use_llm: bool, publish: bool, headful: bool, limit: int, search: str):
+@click.option(
+    "--confirm/--no-confirm",
+    default=True,
+    help="Ask for confirmation before publishing to Twitter/X"
+)
+def main(input_file: str, url: str, output_file: str, use_llm: bool, publish: bool, headful: bool, limit: int, search: str, confirm: bool):
     """
     LinkedIn-to-X Job Parser & Tweet Generator Pipeline.
     
@@ -158,10 +163,14 @@ def main(input_file: str, url: str, output_file: str, use_llm: bool, publish: bo
             click.echo(f"\n{tweet}\n")
             click.echo("      --------------------------------")
             
-            # Interactive publishing logic (human-in-the-loop)
+            # Publishing logic (direct or interactive human-in-the-loop)
             tweet_id = None
             if publish and publisher.is_configured():
-                if click.confirm("Do you want to publish this tweet to X?", default=False):
+                should_publish = True
+                if confirm:
+                    should_publish = click.confirm("Do you want to publish this tweet to X?", default=False)
+                
+                if should_publish:
                     click.echo("[*] Publishing tweet to X...")
                     tweet_id = publisher.publish_tweet(tweet)
                     if tweet_id:

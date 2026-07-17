@@ -1,0 +1,8 @@
+.env
+.playwright_user_data/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+tweets_output.json
+*.png
