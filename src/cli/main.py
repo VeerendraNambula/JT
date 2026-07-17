@@ -12,6 +12,7 @@ from src.linkedin.job_detector import JobDetector
 from src.linkedin.job_parser import JobParser
 from src.twitter.tweet_generator import TweetGenerator
 from src.twitter.publisher import XPublisher
+from src.linkedin.scraper import LinkedInScraper
 
 # Configure logging
 logging.basicConfig(
@@ -23,9 +24,16 @@ logger = logging.getLogger("jt.cli")
 @click.command()
 @click.option(
     "--input-file", "-i",
-    required=True,
+    required=False,
+    default=None,
     type=click.Path(exists=True, dir_okay=False, readable=True),
     help="Path to the raw LinkedIn posts JSON or CSV file"
+)
+@click.option(
+    "--url", "-u",
+    required=False,
+    default=None,
+    help="Direct URL to a public LinkedIn company or user profile updates page to scrape live"
 )
 @click.option(
     "--output-file", "-o",
@@ -43,7 +51,13 @@ logger = logging.getLogger("jt.cli")
     default=False,
     help="Enable interactive human-in-the-loop publishing to X/Twitter (requires Twitter credentials)"
 )
-def main(input_file: str, output_file: str, use_llm: bool, publish: bool):
+@click.option(
+    "--headful",
+    is_flag=True,
+    default=False,
+    help="Launch browser in headful mode to log in manually and bypass bot protections"
+)
+def main(input_file: str, url: str, output_file: str, use_llm: bool, publish: bool, headful: bool):
     """
     LinkedIn-to-X Job Parser & Tweet Generator Pipeline.
     
@@ -54,14 +68,31 @@ def main(input_file: str, output_file: str, use_llm: bool, publish: bool):
     click.echo("   LinkedIn-to-X Job Announcement CLI Pipeline   ")
     click.echo("==================================================")
     
-    # 1. Ingest
-    click.echo(f"[*] Ingesting posts from: {input_file}")
-    try:
-        posts = ingest_raw_posts(input_file)
-        click.echo(f"[+] Successfully loaded {len(posts)} posts.")
-    except Exception as e:
-        click.echo(f"[ERROR] Failed to read input file: {e}", err=True)
+    # 1. Ingest Validation
+    if not input_file and not url:
+        click.echo("[ERROR] Please provide either --input-file (-i) or --url (-u) to run the pipeline.", err=True)
         return
+
+    posts = []
+    if url:
+        click.echo(f"[*] Fetching live posts from LinkedIn URL: {url} (headless={not headful})")
+        try:
+            posts = LinkedInScraper.fetch_posts(url, headless=not headful)
+            if not posts:
+                click.echo("[WARNING] No posts were retrieved from the live page. LinkedIn may have blocked the request or redirected to a login wall.")
+                return
+            click.echo(f"[+] Successfully scraped {len(posts)} posts from the live site.")
+        except Exception as e:
+            click.echo(f"[ERROR] Live crawl failed: {e}", err=True)
+            return
+    else:
+        click.echo(f"[*] Ingesting posts from local file: {input_file}")
+        try:
+            posts = ingest_raw_posts(input_file)
+            click.echo(f"[+] Successfully loaded {len(posts)} posts.")
+        except Exception as e:
+            click.echo(f"[ERROR] Failed to read input file: {e}", err=True)
+            return
         
     # 2. Initialize Components
     detector = JobDetector(use_llm=use_llm)
