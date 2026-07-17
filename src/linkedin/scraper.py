@@ -59,6 +59,8 @@ class LinkedInScraper:
                 
                 # Resilient list of selectors for post updates
                 card_selectors = [
+                    "div[data-testid='mainFeed'] div[role='listitem']",
+                    "div[role='list'] div[role='listitem']",
                     ".org-update-card-single-update",
                     ".feed-shared-update-v2",
                     ".share-update-card",
@@ -89,6 +91,8 @@ class LinkedInScraper:
                         # 2. Text Content
                         text_el = None
                         text_selectors = [
+                            "p._1622ff6d",
+                            "p[class*='_1622ff6d']",
                             ".feed-shared-inline-show-more-text",
                             ".update-components-update-v2__commentary",
                             "span.break-words",
@@ -115,22 +119,40 @@ class LinkedInScraper:
                         if not post_id:
                             post_id = hashlib.md5(text_content.encode("utf-8")).hexdigest()[:10]
                         
-                        # 3. Author Name
-                        author_el = None
-                        author_selectors = [
-                            ".update-components-actor__title",
-                            ".update-components-actor__single-line-truncate",
-                            "span.feed-shared-actor__title",
-                            ".org-update-actor__title",
-                            ".share-update-card__actor-text",
-                            "span.actor__name",
-                            ".feed-shared-actor__name"
-                        ]
-                        for asel in author_selectors:
-                            author_el = card.query_selector(asel)
-                            if author_el:
-                                break
-                        author_name = author_el.inner_text().strip() if author_el else "Unknown Author"
+                        # 3. Author Name and Profile Link (Unified Approach)
+                        author_name = "Unknown Author"
+                        author_profile_url = None
+                        
+                        profile_el = card.query_selector("a[href*='/in/'], a[href*='/company/']")
+                        if profile_el:
+                            href = profile_el.get_attribute("href")
+                            if href:
+                                author_profile_url = f"https://www.linkedin.com{href}" if href.startswith("/") else href
+                            
+                            # Parse author name from profile link text or children
+                            raw_name = profile_el.inner_text().strip()
+                            if raw_name:
+                                # Clean name from follower counts or relative time if captured
+                                lines = [line.strip() for line in raw_name.split("\n") if line.strip()]
+                                if lines:
+                                    author_name = lines[0]
+                        
+                        # Fallback for author name if profile_el didn't yield text
+                        if author_name == "Unknown Author":
+                            author_selectors = [
+                                ".update-components-actor__title",
+                                ".update-components-actor__single-line-truncate",
+                                "span.feed-shared-actor__title",
+                                ".org-update-actor__title",
+                                ".share-update-card__actor-text",
+                                "span.actor__name",
+                                ".feed-shared-actor__name"
+                            ]
+                            for asel in author_selectors:
+                                author_el = card.query_selector(asel)
+                                if author_el:
+                                    author_name = author_el.inner_text().strip().split("\n")[0]
+                                    break
                         
                         # 4. Post Direct URL
                         post_url = None
@@ -141,7 +163,7 @@ class LinkedInScraper:
                                 post_url = f"https://www.linkedin.com{href}" if href.startswith("/") else href
                                 
                         if not post_url:
-                            post_url = f"https://www.linkedin.com/feed/update/{urn}" if urn else url
+                            post_url = f"https://www.linkedin.com/feed/update/{urn}" if urn else author_profile_url or url
                             
                         # 5. Posted Date (Relative string)
                         date_el = None
