@@ -65,6 +65,7 @@ class LinkedInScraper:
                 card_selectors = [
                     "div[data-testid='mainFeed'] div[role='listitem']",
                     "div[role='list'] div[role='listitem']",
+                    "div[role='listitem']",
                     ".org-update-card-single-update",
                     ".feed-shared-update-v2",
                     ".share-update-card",
@@ -108,6 +109,15 @@ class LinkedInScraper:
                                 text_el = card.query_selector(ts)
                                 if text_el:
                                     break
+                            
+                            # Click "show more" if present to expand full description and reveal emails
+                            more_btn = card.query_selector(".feed-shared-inline-show-more-text__button, button.feed-shared-inline-show-more-text__button, .see-more-link, button:has-text('more')")
+                            if more_btn:
+                                try:
+                                    more_btn.click(force=True, timeout=1000)
+                                    page.wait_for_timeout(500)
+                                except Exception:
+                                    pass
                             
                             text_content = text_el.inner_text().strip() if text_el else ""
                             

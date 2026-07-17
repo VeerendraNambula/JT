@@ -59,11 +59,17 @@ logger = logging.getLogger("jt.cli")
 )
 @click.option(
     "--limit", "-l",
-    default=15,
+    default=5,
     type=int,
     help="Maximum number of posts to scrape and process from the live site"
 )
-def main(input_file: str, url: str, output_file: str, use_llm: bool, publish: bool, headful: bool, limit: int):
+@click.option(
+    "--search", "-s",
+    required=False,
+    default=None,
+    help="Search query to search for posts on LinkedIn (e.g. 'hiring email')"
+)
+def main(input_file: str, url: str, output_file: str, use_llm: bool, publish: bool, headful: bool, limit: int, search: str):
     """
     LinkedIn-to-X Job Parser & Tweet Generator Pipeline.
     
@@ -74,11 +80,10 @@ def main(input_file: str, url: str, output_file: str, use_llm: bool, publish: bo
     click.echo("   LinkedIn-to-X Job Announcement CLI Pipeline   ")
     click.echo("==================================================")
     
-    # 1. Ingest Validation
-    if not input_file and not url:
-        click.echo("[ERROR] Please provide either --input-file (-i) or --url (-u) to run the pipeline.", err=True)
-        return
-
+    # 1. Ingest Validation and Default Search Setup
+    if not input_file and not url and not search:
+        search = 'hiring "email"'
+        
     # 2. Initialize Components
     detector = JobDetector(use_llm=use_llm)
     parser = JobParser()
@@ -86,12 +91,18 @@ def main(input_file: str, url: str, output_file: str, use_llm: bool, publish: bo
     publisher = XPublisher()
 
     posts = []
-    if url:
-        click.echo(f"[*] Fetching live posts from LinkedIn URL: {url} (headless={not headful}, target_jobs={limit})")
+    if url or search:
+        target_url = url
+        if not target_url:
+            import urllib.parse
+            target_url = f"https://www.linkedin.com/search/results/content/?keywords={urllib.parse.quote(search)}"
+            click.echo(f"[*] Generated search URL for query '{search}': {target_url}")
+            
+        click.echo(f"[*] Fetching live posts from LinkedIn URL: {target_url} (headless={not headful}, target_jobs={limit})")
         try:
             # Pass the job detector callback to filter posts on-the-fly and keep scrolling until target is met
             posts = LinkedInScraper.fetch_posts(
-                url, 
+                target_url, 
                 limit=limit, 
                 headless=not headful,
                 job_detector_cb=detector.is_job_opening,
