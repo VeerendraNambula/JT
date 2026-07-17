@@ -79,15 +79,28 @@ def main(input_file: str, url: str, output_file: str, use_llm: bool, publish: bo
         click.echo("[ERROR] Please provide either --input-file (-i) or --url (-u) to run the pipeline.", err=True)
         return
 
+    # 2. Initialize Components
+    detector = JobDetector(use_llm=use_llm)
+    parser = JobParser()
+    tweeter = TweetGenerator()
+    publisher = XPublisher()
+
     posts = []
     if url:
-        click.echo(f"[*] Fetching live posts from LinkedIn URL: {url} (headless={not headful}, limit={limit})")
+        click.echo(f"[*] Fetching live posts from LinkedIn URL: {url} (headless={not headful}, target_jobs={limit})")
         try:
-            posts = LinkedInScraper.fetch_posts(url, limit=limit, headless=not headful)
+            # Pass the job detector callback to filter posts on-the-fly and keep scrolling until target is met
+            posts = LinkedInScraper.fetch_posts(
+                url, 
+                limit=limit, 
+                headless=not headful,
+                job_detector_cb=detector.is_job_opening,
+                target_jobs=limit
+            )
             if not posts:
-                click.echo("[WARNING] No posts were retrieved from the live page. LinkedIn may have blocked the request or redirected to a login wall.")
+                click.echo("[WARNING] No job posts matching the official email criteria were found on the live feed.")
                 return
-            click.echo(f"[+] Successfully scraped {len(posts)} posts from the live site.")
+            click.echo(f"[+] Successfully gathered {len(posts)} job posts from the live site.")
         except Exception as e:
             click.echo(f"[ERROR] Live crawl failed: {e}", err=True)
             return
@@ -99,12 +112,6 @@ def main(input_file: str, url: str, output_file: str, use_llm: bool, publish: bo
         except Exception as e:
             click.echo(f"[ERROR] Failed to read input file: {e}", err=True)
             return
-        
-    # 2. Initialize Components
-    detector = JobDetector(use_llm=use_llm)
-    parser = JobParser()
-    tweeter = TweetGenerator()
-    publisher = XPublisher()
     
     # Inform user of status
     api_key_status = "Available" if os.getenv("GEMINI_API_KEY") else "Not configured (Using Heuristics)"

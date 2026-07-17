@@ -1,6 +1,6 @@
 import logging
 import hashlib
-from typing import List
+from typing import List, Optional, Callable
 from playwright.sync_api import sync_playwright
 from src.linkedin.ingest import LinkedInPost
 
@@ -12,9 +12,16 @@ class LinkedInScraper:
     Attempts to retrieve and parse the most recent posts.
     """
     @staticmethod
-    def fetch_posts(url: str, limit: int = 5, headless: bool = True) -> List[LinkedInPost]:
+    @staticmethod
+    def fetch_posts(
+        url: str, 
+        limit: int = 5, 
+        headless: bool = True,
+        job_detector_cb: Optional[Callable[[LinkedInPost], bool]] = None,
+        target_jobs: int = 1
+    ) -> List[LinkedInPost]:
         posts = []
-        logger.info(f"Starting live LinkedIn crawl for URL: {url} (headless={headless})")
+        logger.info(f"Starting live LinkedIn crawl for URL: {url} (headless={headless}, target_jobs={target_jobs})")
         
         import os
         import click
@@ -51,14 +58,10 @@ class LinkedInScraper:
                     context.close()
                     return []
                 
-                # Scroll down dynamically to load enough updates
-                scroll_count = max(2, limit // 5)
-                logger.info(f"Scrolling page {scroll_count} times to load dynamic content...")
-                for _ in range(scroll_count):
-                    page.evaluate("window.scrollTo(0, document.body.scrollHeight);")
-                    page.wait_for_timeout(2000)
+                seen_ids = set()
+                found_jobs_count = 0
+                max_scrolls = 15
                 
-                # Resilient list of selectors for post updates
                 card_selectors = [
                     "div[data-testid='mainFeed'] div[role='listitem']",
                     "div[role='list'] div[role='listitem']",
@@ -70,137 +73,153 @@ class LinkedInScraper:
                     "article"
                 ]
                 
-                cards = []
-                for selector in card_selectors:
-                    cards = page.query_selector_all(selector)
-                    if cards:
-                        logger.info(f"Found {len(cards)} post cards using selector '{selector}'")
-                        break
-                
-                if not cards:
-                    # Generic fallback: search for anything containing a data-urn (usually posts)
-                    cards = page.query_selector_all("div[data-urn]")
-                    if cards:
-                        logger.info(f"Found {len(cards)} post cards using data-urn attributes")
-                
-                for idx, card in enumerate(cards[:limit]):
-                    try:
-                        # 1. Post ID / URN
-                        urn = card.get_attribute("data-urn")
-                        post_id = urn.split(":")[-1] if urn else None
-                        
-                        # 2. Text Content
-                        text_el = None
-                        text_selectors = [
-                            "p._1622ff6d",
-                            "p[class*='_1622ff6d']",
-                            ".feed-shared-inline-show-more-text",
-                            ".update-components-update-v2__commentary",
-                            "span.break-words",
-                            ".feed-shared-text", 
-                            ".feed-shared-update-v2__description-wrapper",
-                            ".commentary",
-                            ".share-update-card__description-text",
-                            ".org-update-card-single-update__commentary",
-                            ".feed-shared-update-v2__commentary",
-                            ".feed-shared-update-v2__description"
-                        ]
-                        for ts in text_selectors:
-                            text_el = card.query_selector(ts)
-                            if text_el:
-                                break
-                        
-                        text_content = text_el.inner_text().strip() if text_el else ""
-                        
-                        # Skip if there's no readable description
-                        if not text_content:
-                            continue
+                for scroll in range(max_scrolls + 1):
+                    cards = []
+                    for selector in card_selectors:
+                        cards = page.query_selector_all(selector)
+                        if cards:
+                            break
+                    if not cards:
+                        cards = page.query_selector_all("div[data-urn]")
+                    
+                    for idx, card in enumerate(cards):
+                        try:
+                            # 1. Post ID / URN
+                            urn = card.get_attribute("data-urn")
+                            post_id = urn.split(":")[-1] if urn else None
                             
-                        # Generate fallback hash ID if URN is missing
-                        if not post_id:
-                            post_id = hashlib.md5(text_content.encode("utf-8")).hexdigest()[:10]
-                        
-                        # 3. Author Name and Profile Link (Unified Approach)
-                        author_name = "Unknown Author"
-                        author_profile_url = None
-                        
-                        profile_el = card.query_selector("a[href*='/in/'], a[href*='/company/']")
-                        if profile_el:
-                            href = profile_el.get_attribute("href")
-                            if href:
-                                author_profile_url = f"https://www.linkedin.com{href}" if href.startswith("/") else href
-                            
-                            # Parse author name from profile link text or children
-                            raw_name = profile_el.inner_text().strip()
-                            if raw_name:
-                                # Clean name from follower counts or relative time if captured
-                                lines = [line.strip() for line in raw_name.split("\n") if line.strip()]
-                                if lines:
-                                    author_name = lines[0]
-                        
-                        # Fallback for author name if profile_el didn't yield text
-                        if author_name == "Unknown Author":
-                            author_selectors = [
-                                ".update-components-actor__title",
-                                ".update-components-actor__single-line-truncate",
-                                "span.feed-shared-actor__title",
-                                ".org-update-actor__title",
-                                ".share-update-card__actor-text",
-                                "span.actor__name",
-                                ".feed-shared-actor__name"
+                            # 2. Text Content
+                            text_el = None
+                            text_selectors = [
+                                "p._1622ff6d",
+                                "p[class*='_1622ff6d']",
+                                ".feed-shared-inline-show-more-text",
+                                ".update-components-update-v2__commentary",
+                                "span.break-words",
+                                ".feed-shared-text", 
+                                ".feed-shared-update-v2__description-wrapper",
+                                ".commentary",
+                                ".share-update-card__description-text",
+                                ".org-update-card-single-update__commentary",
+                                ".feed-shared-update-v2__commentary",
+                                ".feed-shared-update-v2__description"
                             ]
-                            for asel in author_selectors:
-                                author_el = card.query_selector(asel)
-                                if author_el:
-                                    author_name = author_el.inner_text().strip().split("\n")[0]
+                            for ts in text_selectors:
+                                text_el = card.query_selector(ts)
+                                if text_el:
                                     break
-                        
-                        # 4. Post Direct URL
-                        post_url = None
-                        link_el = card.query_selector("a[href*='/feed/update/'], a[href*='/posts/']")
-                        if link_el:
-                            href = link_el.get_attribute("href")
-                            if href:
-                                post_url = f"https://www.linkedin.com{href}" if href.startswith("/") else href
-                                
-                        if not post_url:
-                            post_url = f"https://www.linkedin.com/feed/update/{urn}" if urn else author_profile_url or url
                             
-                        # 5. Posted Date (Relative string)
-                        date_el = None
-                        date_selectors = [
-                            ".update-components-actor__sub-description",
-                            ".feed-shared-actor__sub-text",
-                            ".share-update-card__actor-subtext",
-                            ".org-update-actor__sub-text"
-                        ]
-                        for dsel in date_selectors:
-                            date_el = card.query_selector(dsel)
-                            if date_el:
-                                break
-                        
-                        raw_date = date_el.inner_text().strip() if date_el else "Recent"
-                        # Clean relative time (split by dot bullets)
-                        posted_date = raw_date.split("•")[0].strip() if "•" in raw_date else raw_date
-                        
-                        # 6. Author Profile URL
-                        profile_el = card.query_selector("a[href*='/in/'], a[href*='/company/']")
-                        author_profile_url = None
-                        if profile_el:
-                            href = profile_el.get_attribute("href")
-                            if href:
-                                author_profile_url = f"https://www.linkedin.com{href}" if href.startswith("/") else href
-                        
-                        posts.append(LinkedInPost(
-                            post_id=post_id,
-                            author_name=author_name,
-                            author_profile_url=author_profile_url,
-                            post_url=post_url,
-                            text_content=text_content,
-                            posted_date=posted_date
-                        ))
-                    except Exception as parse_err:
-                        logger.error(f"Error parsing card #{idx}: {parse_err}")
+                            text_content = text_el.inner_text().strip() if text_el else ""
+                            
+                            # Skip if there's no readable description
+                            if not text_content:
+                                continue
+                                
+                            if not post_id:
+                                post_id = hashlib.md5(text_content.encode("utf-8")).hexdigest()[:10]
+                                
+                            if post_id in seen_ids:
+                                continue
+                                
+                            seen_ids.add(post_id)
+                            
+                            # 3. Author Name and Profile Link (Unified Approach)
+                            author_name = "Unknown Author"
+                            author_profile_url = None
+                            
+                            profile_el = card.query_selector("a[href*='/in/'], a[href*='/company/']")
+                            if profile_el:
+                                href = profile_el.get_attribute("href")
+                                if href:
+                                    author_profile_url = f"https://www.linkedin.com{href}" if href.startswith("/") else href
+                                
+                                # Parse author name from profile link text or children
+                                raw_name = profile_el.inner_text().strip()
+                                if raw_name:
+                                    # Clean name from follower counts or relative time if captured
+                                    lines = [line.strip() for line in raw_name.split("\n") if line.strip()]
+                                    if lines:
+                                        author_name = lines[0]
+                            
+                            # Fallback for author name if profile_el didn't yield text
+                            if author_name == "Unknown Author":
+                                author_selectors = [
+                                    ".update-components-actor__title",
+                                    ".update-components-actor__single-line-truncate",
+                                    "span.feed-shared-actor__title",
+                                    ".org-update-actor__title",
+                                    ".share-update-card__actor-text",
+                                    "span.actor__name",
+                                    ".feed-shared-actor__name"
+                                ]
+                                for asel in author_selectors:
+                                    author_el = card.query_selector(asel)
+                                    if author_el:
+                                        author_name = author_el.inner_text().strip().split("\n")[0]
+                                        break
+                            
+                            # 4. Post Direct URL
+                            post_url = None
+                            link_el = card.query_selector("a[href*='/feed/update/'], a[href*='/posts/']")
+                            if link_el:
+                                href = link_el.get_attribute("href")
+                                if href:
+                                    post_url = f"https://www.linkedin.com{href}" if href.startswith("/") else href
+                                    
+                            if not post_url:
+                                post_url = f"https://www.linkedin.com/feed/update/{urn}" if urn else author_profile_url or url
+                                
+                            # 5. Posted Date (Relative string)
+                            date_el = None
+                            date_selectors = [
+                                ".update-components-actor__sub-description",
+                                ".feed-shared-actor__sub-text",
+                                ".share-update-card__actor-subtext",
+                                ".org-update-actor__sub-text"
+                            ]
+                            for dsel in date_selectors:
+                                date_el = card.query_selector(dsel)
+                                if date_el:
+                                    break
+                            
+                            raw_date = date_el.inner_text().strip() if date_el else "Recent"
+                            # Clean relative time (split by dot bullets)
+                            posted_date = raw_date.split("•")[0].strip() if "•" in raw_date else raw_date
+                            
+                            post_obj = LinkedInPost(
+                                post_id=post_id,
+                                author_name=author_name,
+                                author_profile_url=author_profile_url,
+                                post_url=post_url,
+                                text_content=text_content,
+                                posted_date=posted_date
+                            )
+                            
+                            if job_detector_cb:
+                                if job_detector_cb(post_obj):
+                                    found_jobs_count += 1
+                                    posts.append(post_obj)
+                                    click.echo(f"[+] Found job announcement: {author_name} ({post_id})")
+                            else:
+                                posts.append(post_obj)
+                                
+                        except Exception as parse_err:
+                            logger.error(f"Error parsing card: {parse_err}")
+                            
+                    # Exit loop checks
+                    if job_detector_cb:
+                        if found_jobs_count >= target_jobs:
+                            logger.info(f"Found {found_jobs_count} job postings. Reached target of {target_jobs}.")
+                            break
+                    else:
+                        if len(posts) >= limit:
+                            logger.info(f"Reached limit of {limit} posts.")
+                            break
+                            
+                    if scroll < max_scrolls:
+                        logger.info(f"Scrolling feed (scroll {scroll+1}/{max_scrolls}) to load more updates...")
+                        page.evaluate("window.scrollTo(0, document.body.scrollHeight);")
+                        page.wait_for_timeout(3000)
                         
                 context.close()
         except Exception as launch_err:
