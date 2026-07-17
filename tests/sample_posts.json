@@ -1,0 +1,23 @@
+[
+  {
+    "id": "post_1",
+    "author": "Vijay Patel",
+    "url": "https://linkedin.com/posts/vijay-patel-987a",
+    "text": "We are hiring! Looking for a founding AI/ML Engineer to join us at Krama AI in Bengaluru. Experience: 2-4 years. We offer 18-24 LPA + equity. Apply here: https://krama.ai/careers/founding-ml",
+    "date": "2026-07-17T09:30:00Z"
+  },
+  {
+    "id": "post_2",
+    "author": "Anjali Sharma",
+    "url": "https://linkedin.com/posts/anjali-sharma-1234",
+    "text": "Excited to share that I have started a new role as Senior Product Manager! Grateful to all my mentors and colleagues who helped me along the way.",
+    "date": "2026-07-17T10:00:00Z"
+  },
+  {
+    "id": "post_3",
+    "author": "Rajesh Kumar",
+    "url": "https://linkedin.com/posts/rajesh-kumar-888",
+    "text": "Immediate requirement at TechCraft! Role: Senior React Developer. Location: Pune (Remote friendly). Exp: 5+ years. Email your CV to careers@techcraft.in",
+    "date": "2026-07-17T11:15:00Z"
+  }
+]
