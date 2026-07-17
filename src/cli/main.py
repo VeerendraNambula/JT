@@ -57,7 +57,13 @@ logger = logging.getLogger("jt.cli")
     default=False,
     help="Launch browser in headful mode to log in manually and bypass bot protections"
 )
-def main(input_file: str, url: str, output_file: str, use_llm: bool, publish: bool, headful: bool):
+@click.option(
+    "--limit", "-l",
+    default=15,
+    type=int,
+    help="Maximum number of posts to scrape and process from the live site"
+)
+def main(input_file: str, url: str, output_file: str, use_llm: bool, publish: bool, headful: bool, limit: int):
     """
     LinkedIn-to-X Job Parser & Tweet Generator Pipeline.
     
@@ -75,9 +81,9 @@ def main(input_file: str, url: str, output_file: str, use_llm: bool, publish: bo
 
     posts = []
     if url:
-        click.echo(f"[*] Fetching live posts from LinkedIn URL: {url} (headless={not headful})")
+        click.echo(f"[*] Fetching live posts from LinkedIn URL: {url} (headless={not headful}, limit={limit})")
         try:
-            posts = LinkedInScraper.fetch_posts(url, headless=not headful)
+            posts = LinkedInScraper.fetch_posts(url, limit=limit, headless=not headful)
             if not posts:
                 click.echo("[WARNING] No posts were retrieved from the live page. LinkedIn may have blocked the request or redirected to a login wall.")
                 return

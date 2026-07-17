@@ -51,9 +51,10 @@ class LinkedInScraper:
                     context.close()
                     return []
                 
-                # Scroll down twice to trigger loading of older updates
-                logger.info("Scrolling page to load dynamic content...")
-                for _ in range(2):
+                # Scroll down dynamically to load enough updates
+                scroll_count = max(2, limit // 5)
+                logger.info(f"Scrolling page {scroll_count} times to load dynamic content...")
+                for _ in range(scroll_count):
                     page.evaluate("window.scrollTo(0, document.body.scrollHeight);")
                     page.wait_for_timeout(2000)
                 
