@@ -29,9 +29,28 @@ class JobDetector:
         """
         Determines if a post represents a job announcement.
         """
-        # Heuristics check
         text_lower = post.text_content.lower()
         
+        # Strict user constraints: must contain "hiring" and an official email (not ending with @gmail.com, @yahoo.com, etc.)
+        if "hiring" not in text_lower:
+            return False
+            
+        import re
+        emails = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', text_lower)
+        if not emails:
+            return False
+            
+        # Check if there is at least one official (non-gmail/non-personal) email
+        has_official_email = False
+        excluded_domains = ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "icloud.com"]
+        for email in emails:
+            if not any(email.endswith("@" + domain) for domain in excluded_domains):
+                has_official_email = True
+                break
+                
+        if not has_official_email:
+            return False
+
         # Self-promotion / career update negations
         negations = [
             "started a new role", "started as", "excited to share that i", 
