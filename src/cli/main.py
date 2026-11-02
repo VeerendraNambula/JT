@@ -1,11 +1,12 @@
 import json
 import logging
 import os
+from pathlib import Path
 import click
 from dotenv import load_dotenv
 
 # Load env variables from .env file if available
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 from src.linkedin.ingest import ingest_raw_posts, ProcessingResult
 from src.linkedin.job_detector import JobDetector
