@@ -32,3 +32,16 @@ def test_heuristic_job_detection():
     assert detector.is_job_opening(gmail_job_post) is False
     assert detector.is_job_opening(no_email_job_post) is False
     assert detector.is_job_opening(non_job_post) is False
+
+
+def test_career_update_is_not_classified_as_a_job():
+    detector = JobDetector(use_llm=False)
+    post = LinkedInPost(
+        post_id="post_5",
+        author_name="Eve",
+        text_content=(
+            "I am excited to share that I started a new role. "
+            "Our company is hiring; contact careers@example.com for details."
+        ),
+    )
+    assert detector.is_job_opening(post) is False
