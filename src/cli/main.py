@@ -61,8 +61,8 @@ logger = logging.getLogger("jt.cli")
 @click.option(
     "--limit", "-l",
     default=5,
-    type=int,
-    help="Maximum number of posts to scrape and process from the live site"
+    type=click.IntRange(min=1, max=100),
+    help="Maximum number of posts to scrape and process from the live site (1–100)"
 )
 @click.option(
     "--search", "-s",
