@@ -59,7 +59,7 @@ class JobDetector:
         ]
         
         if any(neg in text_lower for neg in negations):
-            has_keyword = False
+            return False
         else:
             keywords = [
                 "hiring", "recruiting", "open position", "looking for a", 
