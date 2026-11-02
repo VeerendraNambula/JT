@@ -1,5 +1,6 @@
 import logging
 import hashlib
+from urllib.parse import urlparse
 from typing import List, Optional, Callable
 from playwright.sync_api import sync_playwright
 from src.linkedin.ingest import LinkedInPost
@@ -12,7 +13,6 @@ class LinkedInScraper:
     Attempts to retrieve and parse the most recent posts.
     """
     @staticmethod
-    @staticmethod
     def fetch_posts(
         url: str, 
         limit: int = 5, 
@@ -20,6 +20,14 @@ class LinkedInScraper:
         job_detector_cb: Optional[Callable[[LinkedInPost], bool]] = None,
         target_jobs: int = 1
     ) -> List[LinkedInPost]:
+        parsed_url = urlparse(url)
+        if parsed_url.scheme != "https" or not parsed_url.hostname or not (
+            parsed_url.hostname == "linkedin.com" or parsed_url.hostname.endswith(".linkedin.com")
+        ):
+            raise ValueError("Only HTTPS LinkedIn URLs are allowed.")
+        if limit < 1 or target_jobs < 1:
+            raise ValueError("limit and target_jobs must be positive integers.")
+
         posts = []
         logger.info(f"Starting live LinkedIn crawl for URL: {url} (headless={headless}, target_jobs={target_jobs})")
         
