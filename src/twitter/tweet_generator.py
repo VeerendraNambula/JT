@@ -1,107 +1,85 @@
 import re
-from typing import Optional
+
 from src.linkedin.ingest import JobDetails
 
+
 class TweetGenerator:
-    """
-    Converts parsed job information into highly engaging, tech-oriented tweets.
-    Guarantees tweet length is strictly below 280 characters, accounting for X's
-    t.co shortener counting all URLs as 23 characters.
-    """
-    @staticmethod
-    def get_x_length(text: str) -> int:
-        """
-        Calculates the length of the tweet as X (Twitter) would, where any URL
-        is counted as exactly 23 characters.
-        """
-        # Regex to find standard http/https URLs
-        url_pattern = r"https?://[^\s]+"
-        # Replace URLs with a 23-character dummy string
-        simulated_text = re.sub(url_pattern, "x" * 23, text)
-        return len(simulated_text)
+    """Build X-ready job posts using X's 23-character URL weighting."""
+
+    URL_PATTERN = re.compile(r"https?://[^\s]+")
+
+    @classmethod
+    def get_x_length(cls, text: str) -> int:
+        return len(cls.URL_PATTERN.sub("x" * 23, text))
 
     def generate_tweet(self, job: JobDetails) -> str:
-        """
-        Generates a tweet string from JobDetails and applies progressive
-        truncation rules if the length exceeds 280 characters.
-        """
-        role_lower = job.role.lower()
-        
-        # Determine emoji and category hashtag
-        if any(term in role_lower for term in ["ai", "ml", "machine learning", "deep learning", "nlp", "llm", "vision"]):
-            emoji = "🤖"
-            category_tag = "#AI"
+        role_lower = (job.role or "").lower()
+        if any(term in role_lower for term in ("ai", "ml", "machine learning", "deep learning", "nlp", "llm", "vision")):
+            emoji, category_tag = "🤖", "#AI"
         elif "data" in role_lower:
-            emoji = "📊"
-            category_tag = "#Data"
-        elif any(term in role_lower for term in ["stack", "backend", "frontend", "dev", "engineer", "code", "coder", "programmer"]):
-            emoji = "💻"
-            category_tag = "#Dev"
-        elif any(term in role_lower for term in ["product", "pm"]):
-            emoji = "🎯"
-            category_tag = "#PM"
+            emoji, category_tag = "📊", "#Data"
+        elif any(term in role_lower for term in ("stack", "backend", "frontend", "dev", "engineer", "code", "programmer")):
+            emoji, category_tag = "💻", "#Dev"
+        elif any(term in role_lower for term in ("product", "pm")):
+            emoji, category_tag = "🎯", "#PM"
         else:
-            emoji = "💼"
-            category_tag = "#Tech"
+            emoji, category_tag = "💼", "#Tech"
 
-        role = job.role
-        company = job.company
-        location = job.location
-        exp = job.experience_level
-        salary = job.salary
-        link = job.apply_link or ""
+        fields = {
+            "role": job.role or "Open role",
+            "company": job.company or "Unspecified",
+            "location": job.location or "Not specified",
+            "experience": job.experience_level or "Not specified",
+            "salary": job.salary,
+            "link": job.apply_link or "",
+        }
 
-        def build_text(r: str, c: str, include_salary: bool, include_tags: bool) -> str:
+        def build(include_salary=True, include_tags=True):
             lines = [
-                f"{emoji} Job Alert: {r}",
-                f"🏢 Company: {c}",
-                f"📍 Location: {location}",
-                f"💼 Exp: {exp}"
+                f"{emoji} Job Alert: {fields['role']}",
+                f"🏢 Company: {fields['company']}",
+                f"📍 Location: {fields['location']}",
+                f"💼 Exp: {fields['experience']}",
             ]
-            if include_salary and salary:
-                lines.append(f"💰 Salary: {salary}")
-            
-            if link:
-                lines.append(f"\n🔗 Apply: {link}")
-            
-            text = "\n".join(lines)
+            if include_salary and fields["salary"]:
+                lines.append(f"💰 Salary: {fields['salary']}")
+            if fields["link"]:
+                lines.append(f"\n🔗 Apply: {fields['link']}")
             if include_tags:
-                text += f"\n\n#IndiaJobs #TechHiring {category_tag}"
-            return text
+                lines.append(f"\n#IndiaJobs #TechHiring {category_tag}")
+            return "\n".join(lines)
 
-        # Step 1: Attempt full tweet (with salary & tags)
-        tweet = build_text(role, company, include_salary=True, include_tags=True)
-        if self.get_x_length(tweet) <= 280:
-            return tweet
+        # Prefer the complete announcement, then progressively remove optional content.
+        for include_salary, include_tags in ((True, True), (False, True), (False, False)):
+            candidate = build(include_salary, include_tags)
+            if self.get_x_length(candidate) <= 280:
+                return candidate
 
-        # Step 2: Try without tags
-        tweet = build_text(role, company, include_salary=True, include_tags=False)
-        if self.get_x_length(tweet) <= 280:
-            return tweet
+        # Bound user-controlled fields so even malformed posts cannot create oversized drafts.
+        for field, limit in (("role", 55), ("company", 35), ("location", 35), ("experience", 24), ("salary", 28)):
+            value = fields[field]
+            if value and len(value) > limit:
+                fields[field] = value[: limit - 3].rstrip() + "..."
 
-        # Step 3: Try without salary
-        tweet = build_text(role, company, include_salary=False, include_tags=False)
-        if self.get_x_length(tweet) <= 280:
-            return tweet
+        candidate = build(include_salary=False, include_tags=False)
+        # Keep the application link intact; trim the descriptive lines if needed.
+        for field in ("location", "experience", "company", "role"):
+            while self.get_x_length(candidate) > 280 and len(fields[field]) > 12:
+                fields[field] = fields[field][: max(9, len(fields[field]) - 8)].rstrip() + "..."
+                candidate = build(include_salary=False, include_tags=False)
 
-        # Step 4: Iteratively truncate role and company to fit
-        max_role_len = 50
-        max_company_len = 30
-        
-        while self.get_x_length(tweet) > 280:
-            if len(role) > max_role_len:
-                role = role[:max_role_len - 3].strip() + "..."
-            elif len(company) > max_company_len:
-                company = company[:max_company_len - 3].strip() + "..."
-            else:
-                # Aggressive fallback truncation if still too long (e.g. extremely long location or exp)
-                if len(role) > 15:
-                    role = role[:len(role) - 10].strip() + "..."
-                elif len(company) > 15:
-                    company = company[:len(company) - 10].strip() + "..."
-                else:
-                    break  # Stop infinite loops, return whatever we managed
-            
-            tweet = build_text(role, company, include_salary=False, include_tags=False)
+        if self.get_x_length(candidate) <= 280:
+            return candidate
 
-        return tweet
+        # Last-resort compact format; preserve the destination link.
+        link_line = f"\n🔗 Apply: {fields['link']}" if fields["link"] else ""
+        prefix = f"{emoji} {fields['role'][:40]} at {fields['company'][:25]}"
+        suffix = f" | {fields['location'][:25]}"
+        compact = prefix + suffix + link_line
+        while self.get_x_length(compact) > 280 and len(suffix) > 5:
+            suffix = suffix[:-4] + "..."
+            compact = prefix + suffix + link_line
+        while self.get_x_length(compact) > 280 and len(prefix) > 12:
+            prefix = prefix[:-4] + "..."
+            compact = prefix + suffix + link_line
+        return compact
